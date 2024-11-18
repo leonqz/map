@@ -2,11 +2,15 @@ import streamlit as st
 import pandas as pd
 import pydeck as pdk
 
+
 # Sample data with cost per state for each Thanksgiving item
-df = pd.read_csv("Marketing - Thanksgiving8.csv")
+df = pd.read_csv("Marketing - Thanksgiving9.csv")
 
 # Streamlit title
-st.title("Interactive Holiday Meal Cost Map")
+st.title("🧺 BetterBasket Interactive Holiday Meal Cost Map")
+
+st.markdown('<p style="font-size:14px; font-style:italic; color:gray;">A visualization of total costs for Thanksgiving baskets based on most common grocery chain in the state</p>', unsafe_allow_html=True)
+
 
 all_items = df.columns[4:]  # Assuming columns after "State" and "Grocery Store" are items
 
@@ -57,6 +61,9 @@ df["Cost_Text"] = df["Total Cost"].apply(lambda x: f"${x:,.2f}")  # Add dollar s
 df["Cost_Scale"] = df["Total Cost"] / df["Total Cost"].max()  # Scale between 0 and 1
 
 
+df["Total Cost Tooltip"] = df["Total Cost"].round(2)  # Round to two decimal places
+
+
 scatter_layer = pdk.Layer(
    "ScatterplotLayer",
    data=df,
@@ -74,8 +81,10 @@ text_layer = pdk.Layer(
     get_text="Cost_Text",
     get_color=[0, 0, 0, 255],  # Black text
     get_size=10,  # Text size
-    get_alignment_baseline="'bottom'",  # Position text below the dot
+    get_alignment_baseline="'top'",  # Position text below the dot
     get_anchor="'middle'",  # Center text horizontally
+    get_pixel_offset="[0, -20]",  # Slight upward offset
+
     pickable=False
 )
 
@@ -96,7 +105,7 @@ view_state = pdk.ViewState(
 r = pdk.Deck(
     layers=[text_layer,scatter_layer],
     initial_view_state=view_state,
-    tooltip={"text": "{State} ({Grocery Store}): ${Total Cost}"},
+    tooltip={"text": "{State} ({Grocery Store}): ${Total Cost Tooltip}"},
     map_style="mapbox://styles/mapbox/light-v10"
 )
 
@@ -104,8 +113,25 @@ r = pdk.Deck(
 st.pydeck_chart(r)
 
 # Prepare detailed summary for each state, chain, and basket
-detailed_summary = df[["State", "Grocery Store"] + list(selected_items.keys()) + ["Total Cost Rounded"]]
+columns_order = ["State", "Grocery Store", "Total Cost"] + list(selected_items.keys())  # Reorder columns
+detailed_summary = df[columns_order]
+
+
+# Apply heatmap styling based on ranking within columns
+heatmap_summary = detailed_summary.style.background_gradient(
+    subset=["Total Cost"] + list(selected_items.keys()),  # Columns to apply gradient
+    cmap="YlOrRd"  # Heatmap color scheme
+)
+
+# Format monetary columns to display dollar signs and two decimal places
+formatted_summary = detailed_summary.style.format(
+    subset=["Total Cost"] + list(selected_items.keys()),
+    formatter=lambda x: f"${x:,.2f}"  # Dollar sign and two decimal places
+).background_gradient(
+    subset=["Total Cost"] + list(selected_items.keys()),  # Columns to apply gradient
+    cmap="YlOrRd"  # Heatmap color scheme
+)
 
 # Display detailed summary
-st.write("Detailed Summary of Each State's Basket:")
-st.write(detailed_summary)
+st.title("Detailed Summary of Each State's Basket:")
+st.dataframe(formatted_summary)
