@@ -3,12 +3,15 @@ import pandas as pd
 import pydeck as pdk
 
 # Sample data with cost per state for each Thanksgiving item
-df = pd.read_csv("Marketing - Thanksgiving - Sheet7.csv")
+df = pd.read_csv("Marketing - Thanksgiving8.csv")
 
 # Streamlit title
 st.title("Interactive Holiday Meal Cost Map")
 
-items = df.columns[5:]  # Assuming columns after "State" and "Grocery Store" are items
+all_items = df.columns[4:]  # Assuming columns after "State" and "Grocery Store" are items
+
+regular_items = [item for item in all_items if not item.endswith("- Private Label")]
+private_label_items = {item.replace(" - Private Label", ""): item for item in all_items if item.endswith("- Private Label")}
 
 # Assuming columns after "State" and "Grocery Store" are numeric
 for col in df.columns[5:]:
@@ -26,12 +29,27 @@ private_label = st.sidebar.checkbox("Make All Items Private Label")
 
 # Sidebar for item selection
 st.sidebar.header("Select Thanksgiving Items to Add to Total Cost:")
-selected_items = {item: st.sidebar.checkbox(item, value=True) for item in items}
+
+
+if private_label:
+    # Replace regular items with their private label versions
+    selected_items = {
+        private_label_items.get(item, item): st.sidebar.checkbox(item, value=True) for item in regular_items
+    }
+else:
+    # Use only regular items
+    selected_items = {
+        item: st.sidebar.checkbox(item, value=True) for item in regular_items
+    }
+
 
 # Calculate total cost based on selected items
 df["Total Cost"] = df.apply(
     lambda row: sum(row[item] for item in selected_items if selected_items[item]), axis=1
 )
+
+df["Total Cost Rounded"] = df["Total Cost"].round(2)
+
 
 df["Cost_Text"] = df["Total Cost"].apply(lambda x: f"${x:,.2f}")  # Add dollar sign and format as currency
 
@@ -86,7 +104,7 @@ r = pdk.Deck(
 st.pydeck_chart(r)
 
 # Prepare detailed summary for each state, chain, and basket
-detailed_summary = df[["State", "Grocery Store"] + list(selected_items.keys()) + ["Total Cost"]]
+detailed_summary = df[["State", "Grocery Store"] + list(selected_items.keys()) + ["Total Cost Rounded"]]
 
 # Display detailed summary
 st.write("Detailed Summary of Each State's Basket:")
