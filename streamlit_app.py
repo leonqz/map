@@ -4,7 +4,7 @@ import pydeck as pdk
 
 
 # Sample data with cost per state for each Thanksgiving item
-df = pd.read_csv("Marketing - Thanksgiving12.csv")
+df = pd.read_csv("Marketing - Thanksgiving13.csv")
 
 # Streamlit title
 st.title("🧺 BetterBasket Interactive Holiday Meal Cost Map")
